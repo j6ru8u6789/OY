@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Olive Young 購物隨身計算器 (含退稅計算)</title>
+  <title>Olive Young 購物隨身計算器 (含數量與台幣換算)</title>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -19,7 +19,7 @@
       box-shadow: 0 2px 8px rgba(0,0,0,0.08);
       margin-bottom: 16px;
     }
-    h2 { margin-top: 0; color: #8cb811; font-size: 20px; } /* Olive Young 品牌綠 */
+    h2 { margin-top: 0; color: #8cb811; font-size: 20px; }
     h3 { margin-top: 0; color: #444; font-size: 16px; }
     
     .input-group {
@@ -32,17 +32,17 @@
       gap: 8px;
     }
     input {
-      flex: 1;
       padding: 12px;
       border: 1px solid #ddd;
       border-radius: 8px;
       font-size: 16px;
       outline: none;
     }
-    input:focus {
-      border-color: #8cb811;
-    }
-    button {
+    input[type="text"] { flex: 2; }
+    input[type="number"] { flex: 1; }
+    input:focus { border-color: #8cb811; }
+    
+    .add-btn {
       padding: 12px 16px;
       background: #8cb811;
       color: white;
@@ -52,9 +52,7 @@
       font-weight: bold;
       cursor: pointer;
     }
-    button:active {
-      background: #769c0e;
-    }
+    .add-btn:active { background: #769c0e; }
     
     .item-list {
       list-style: none;
@@ -71,15 +69,34 @@
     .item-info {
       display: flex;
       flex-direction: column;
+      gap: 2px;
+      flex: 1;
     }
-    .item-name {
-      font-weight: 500;
-      font-size: 15px;
+    .item-name { font-weight: 500; font-size: 15px; }
+    .item-price { color: #666; font-size: 13px; }
+    .item-twd { color: #2b78e4; font-size: 13px; font-weight: 500; }
+
+    .qty-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin: 0 10px;
     }
-    .item-price {
-      color: #666;
-      font-size: 14px;
+    .qty-btn {
+      width: 28px;
+      height: 28px;
+      background: #f0f0f0;
+      border: 1px solid #ccc;
+      border-radius: 50%;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
+    .qty-count { font-size: 14px; font-weight: bold; min-width: 18px; text-align: center; }
+
     .delete-btn {
       background: #ff4d4f;
       color: white;
@@ -121,12 +138,13 @@
 <body>
 
   <div class="card">
-    <h2>🛍️ Olive Young 手動記帳</h2>
+    <h2>🛍️ Olive Young 記帳助手</h2>
     <div class="input-group">
-      <input type="text" id="item-name" placeholder="商品名稱（選填，例：護手霜）">
+      <input type="text" id="item-name" placeholder="商品名稱（例：面膜）">
       <div class="input-row">
-        <input type="number" id="item-price" placeholder="價格 (韓元 ₩)" inputmode="numeric">
-        <button onclick="addItem()">新增</button>
+        <input type="number" id="item-price" placeholder="單價 (₩)" inputmode="numeric">
+        <input type="number" id="item-qty" placeholder="數量" value="1" min="1" inputmode="numeric" style="width: 60px;">
+        <button class="add-btn" onclick="addItem()">新增</button>
       </div>
     </div>
   </div>
@@ -138,15 +156,15 @@
     <div class="summary-box">
       <div class="summary-row">
         <span>原價總計：</span>
-        <span>₩ <span id="subtotal">0</span></span>
+        <span>₩ <span id="subtotal">0</span> <small style="color:#666;">(NT$ <span id="subtotal-twd">0</span>)</small></span>
       </div>
       <div class="summary-row" style="color: #2b78e4;">
         <span>預計現場退稅：</span>
-        <span>- ₩ <span id="tax-refund">0</span></span>
+        <span>- ₩ <span id="tax-refund">0</span> <small>(NT$ <span id="refund-twd">0</span>)</small></span>
       </div>
       <div class="summary-row total">
         <span>實付預估金額：</span>
-        <span>₩ <span id="final-total">0</span></span>
+        <span>₩ <span id="final-total">0</span> <br><small style="font-size: 14px; font-weight: normal; display: block; text-align: right;">(約 NT$ <span id="final-twd">0</span>)</small></span>
       </div>
       <div class="tax-notice" id="tax-status">
         💡 滿 ₩15,000 即可享現場即時退稅（記得出示護照）
@@ -155,13 +173,15 @@
   </div>
 
   <script>
+    // 台新/中信信用卡實務估算匯率：
+    // 國際組織參考匯率 (~0.0234) + 海外刷卡 1.5% 手續費 ≈ 0.02375 (1,000 韓元 ≈ 23.8 台幣)
+    const EXCHANGE_RATE = 0.02375;
+
     let items = [];
 
-    // 韓國現場即時退稅 階梯估算函數 (依據現行韓國 Tax Free 級距表估算)
+    // 韓國現場即時退稅階梯計算
     function calculateTaxRefund(amount) {
-      if (amount < 15000) return 0; // 門檻 15,000 韓元
-      
-      // 韓國現場退稅為固定級距，以下為常見消費額度估算值
+      if (amount < 15000) return 0;
       if (amount < 30000) return 1000;
       if (amount < 50000) return 2000;
       if (amount < 75000) return 3500;
@@ -176,30 +196,43 @@
       if (amount < 400000) return 21000;
       if (amount < 450000) return 24000;
       if (amount < 500000) return 27000;
-      
-      // 若超過 50 萬韓元，以約 6% ~ 7% 做估算
       return Math.floor(amount * 0.06);
     }
 
     function addItem() {
       const nameInput = document.getElementById('item-name');
       const priceInput = document.getElementById('item-price');
+      const qtyInput = document.getElementById('item-qty');
 
       const name = nameInput.value.trim() || `商品 ${items.length + 1}`;
       const price = parseInt(priceInput.value);
+      const qty = parseInt(qtyInput.value) || 1;
 
       if (isNaN(price) || price <= 0) {
         alert('請輸入有效的金額！');
         return;
       }
 
-      items.push({ id: Date.now(), name, price });
+      items.push({ id: Date.now(), name, price, qty });
 
       // 清空輸入框
       nameInput.value = '';
       priceInput.value = '';
+      qtyInput.value = '1';
 
       updateUI();
+    }
+
+    function changeQty(id, delta) {
+      const item = items.find(i => i.id === id);
+      if (item) {
+        item.qty += delta;
+        if (item.qty <= 0) {
+          deleteItem(id);
+          return;
+        }
+        updateUI();
+      }
     }
 
     function deleteItem(id) {
@@ -214,14 +247,22 @@
       let subtotal = 0;
 
       items.forEach(item => {
-        subtotal += item.price;
+        const itemTotalKrw = item.price * item.qty;
+        const itemTotalTwd = Math.round(itemTotalKrw * EXCHANGE_RATE);
+        subtotal += itemTotalKrw;
 
         const li = document.createElement('li');
         li.className = 'item-row';
         li.innerHTML = `
           <div class="item-info">
             <span class="item-name">${item.name}</span>
-            <span class="item-price">₩ ${item.price.toLocaleString()}</span>
+            <span class="item-price">₩ ${item.price.toLocaleString()} × ${item.qty} = ₩ ${itemTotalKrw.toLocaleString()}</span>
+            <span class="item-twd">≈ NT$ ${itemTotalTwd.toLocaleString()}</span>
+          </div>
+          <div class="qty-controls">
+            <button class="qty-btn" onclick="changeQty(${item.id}, -1)">-</button>
+            <span class="qty-count">${item.qty}</span>
+            <button class="qty-btn" onclick="changeQty(${item.id}, 1)">+</button>
           </div>
           <button class="delete-btn" onclick="deleteItem(${item.id})">刪除</button>
         `;
@@ -231,9 +272,19 @@
       const refund = calculateTaxRefund(subtotal);
       const finalTotal = subtotal - refund;
 
+      // 換算台幣
+      const subtotalTwd = Math.round(subtotal * EXCHANGE_RATE);
+      const refundTwd = Math.round(refund * EXCHANGE_RATE);
+      const finalTwd = Math.round(finalTotal * EXCHANGE_RATE);
+
       document.getElementById('subtotal').innerText = subtotal.toLocaleString();
+      document.getElementById('subtotal-twd').innerText = subtotalTwd.toLocaleString();
+
       document.getElementById('tax-refund').innerText = refund.toLocaleString();
+      document.getElementById('refund-twd').innerText = refundTwd.toLocaleString();
+
       document.getElementById('final-total').innerText = finalTotal.toLocaleString();
+      document.getElementById('final-twd').innerText = finalTwd.toLocaleString();
 
       // 更新提示狀態
       const statusEl = document.getElementById('tax-status');
@@ -242,7 +293,8 @@
         statusEl.style.color = '#666';
       } else if (subtotal < 15000) {
         const diff = 15000 - subtotal;
-        statusEl.innerText = `⚠️ 還差 ₩${diff.toLocaleString()} 即可達到退稅門檻！`;
+        const diffTwd = Math.round(diff * EXCHANGE_RATE);
+        statusEl.innerText = `⚠️ 還差 ₩${diff.toLocaleString()} (約 NT$${diffTwd}) 即可達到退稅門檻！`;
         statusEl.style.color = '#d93025';
       } else if (subtotal > 1000000) {
         statusEl.innerText = '⚠️ 注意：現場即時退稅單筆消費上限為 ₩1,000,000，超過部分需至機場辦理。';
