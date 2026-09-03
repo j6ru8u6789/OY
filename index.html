@@ -3,75 +3,254 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Olive Young 購物隨身計算器</title>
-  <script src="https://unpkg.com/html5-qrcode"></script>
+  <title>Olive Young 購物隨身計算器 (含退稅計算)</title>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 16px; background: #f8f9fa; }
-    .card { background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 16px; }
-    h2 { margin-top: 0; color: #8cb811; } /* Olive Young 品牌綠 */
-    #reader { width: 100%; border-radius: 8px; overflow: hidden; }
-    .input-group { display: flex; gap: 8px; margin-top: 12px; }
-    input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; }
-    button { padding: 10px 16px; background: #8cb811; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; }
-    .item-list { list-style: none; padding: 0; margin: 0; }
-    .item-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; }
-    .total-box { font-size: 20px; font-weight: bold; text-align: right; color: #d93025; margin-top: 12px; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0;
+      padding: 16px;
+      background: #f8f9fa;
+      color: #333;
+    }
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      margin-bottom: 16px;
+    }
+    h2 { margin-top: 0; color: #8cb811; font-size: 20px; } /* Olive Young 品牌綠 */
+    h3 { margin-top: 0; color: #444; font-size: 16px; }
+    
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .input-row {
+      display: flex;
+      gap: 8px;
+    }
+    input {
+      flex: 1;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+      outline: none;
+    }
+    input:focus {
+      border-color: #8cb811;
+    }
+    button {
+      padding: 12px 16px;
+      background: #8cb811;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:active {
+      background: #769c0e;
+    }
+    
+    .item-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .item-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid #eee;
+    }
+    .item-info {
+      display: flex;
+      flex-direction: column;
+    }
+    .item-name {
+      font-weight: 500;
+      font-size: 15px;
+    }
+    .item-price {
+      color: #666;
+      font-size: 14px;
+    }
+    .delete-btn {
+      background: #ff4d4f;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .summary-box {
+      background: #f0f7e6;
+      border: 1px solid #cce599;
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 12px;
+    }
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 15px;
+    }
+    .summary-row.total {
+      font-size: 18px;
+      font-weight: bold;
+      color: #d93025;
+      border-top: 1px dashed #ccc;
+      padding-top: 8px;
+      margin-bottom: 0;
+    }
+    .tax-notice {
+      font-size: 12px;
+      color: #666;
+      margin-top: 6px;
+    }
   </style>
 </head>
 <body>
 
   <div class="card">
-    <h2>🛍️ Olive Young 掃碼記帳</h2>
-    <div id="reader"></div>
-    
+    <h2>🛍️ Olive Young 手動記帳</h2>
     <div class="input-group">
-      <input type="text" id="barcode-result" placeholder="條碼號碼 / 商品名稱">
-      <input type="number" id="price-input" placeholder="價格 (韓元 ₩)">
-      <button onclick="addItem()">新增</button>
+      <input type="text" id="item-name" placeholder="商品名稱（選填，例：護手霜）">
+      <div class="input-row">
+        <input type="number" id="item-price" placeholder="價格 (韓元 ₩)" inputmode="numeric">
+        <button onclick="addItem()">新增</button>
+      </div>
     </div>
   </div>
 
   <div class="card">
     <h3>🛒 購物清單</h3>
     <ul id="item-list" class="item-list"></ul>
-    <div class="total-box">總計：₩ <span id="total-price">0</span></div>
+
+    <div class="summary-box">
+      <div class="summary-row">
+        <span>原價總計：</span>
+        <span>₩ <span id="subtotal">0</span></span>
+      </div>
+      <div class="summary-row" style="color: #2b78e4;">
+        <span>預計現場退稅：</span>
+        <span>- ₩ <span id="tax-refund">0</span></span>
+      </div>
+      <div class="summary-row total">
+        <span>實付預估金額：</span>
+        <span>₩ <span id="final-total">0</span></span>
+      </div>
+      <div class="tax-notice" id="tax-status">
+        💡 滿 ₩15,000 即可享現場即時退稅（記得出示護照）
+      </div>
+    </div>
   </div>
 
   <script>
-    let total = 0;
+    let items = [];
 
-    // 初始化掃描器
-    function onScanSuccess(decodedText, decodedResult) {
-      document.getElementById('barcode-result').value = decodedText;
-      // 提醒使用者輸入現場標籤上的價格
-      document.getElementById('price-input').focus();
+    // 韓國現場即時退稅 階梯估算函數 (依據現行韓國 Tax Free 級距表估算)
+    function calculateTaxRefund(amount) {
+      if (amount < 15000) return 0; // 門檻 15,000 韓元
+      
+      // 韓國現場退稅為固定級距，以下為常見消費額度估算值
+      if (amount < 30000) return 1000;
+      if (amount < 50000) return 2000;
+      if (amount < 75000) return 3500;
+      if (amount < 100000) return 5000;
+      if (amount < 125000) return 6000;
+      if (amount < 150000) return 7500;
+      if (amount < 175000) return 9000;
+      if (amount < 200000) return 10000;
+      if (amount < 250000) return 12000;
+      if (amount < 300000) return 15000;
+      if (amount < 350000) return 18000;
+      if (amount < 400000) return 21000;
+      if (amount < 450000) return 24000;
+      if (amount < 500000) return 27000;
+      
+      // 若超過 50 萬韓元，以約 6% ~ 7% 做估算
+      return Math.floor(amount * 0.06);
     }
 
-    let html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
-    html5QrcodeScanner.render(onScanSuccess);
-
-    // 新增商品至清單
     function addItem() {
-      const name = document.getElementById('barcode-result').value || '未命名商品';
-      const price = parseInt(document.getElementById('price-input').value) || 0;
+      const nameInput = document.getElementById('item-name');
+      const priceInput = document.getElementById('item-price');
 
-      if (price <= 0) {
+      const name = nameInput.value.trim() || `商品 ${items.length + 1}`;
+      const price = parseInt(priceInput.value);
+
+      if (isNaN(price) || price <= 0) {
         alert('請輸入有效的金額！');
         return;
       }
 
-      total += price;
-      document.getElementById('total-price').innerText = total.toLocaleString();
-
-      const ul = document.getElementById('item-list');
-      const li = document.createElement('li');
-      li.className = 'item-row';
-      li.innerHTML = `<span>${name}</span> <span>₩ ${price.toLocaleString()}</span>`;
-      ul.appendChild(li);
+      items.push({ id: Date.now(), name, price });
 
       // 清空輸入框
-      document.getElementById('barcode-result').value = '';
-      document.getElementById('price-input').value = '';
+      nameInput.value = '';
+      priceInput.value = '';
+
+      updateUI();
+    }
+
+    function deleteItem(id) {
+      items = items.filter(item => item.id !== id);
+      updateUI();
+    }
+
+    function updateUI() {
+      const ul = document.getElementById('item-list');
+      ul.innerHTML = '';
+
+      let subtotal = 0;
+
+      items.forEach(item => {
+        subtotal += item.price;
+
+        const li = document.createElement('li');
+        li.className = 'item-row';
+        li.innerHTML = `
+          <div class="item-info">
+            <span class="item-name">${item.name}</span>
+            <span class="item-price">₩ ${item.price.toLocaleString()}</span>
+          </div>
+          <button class="delete-btn" onclick="deleteItem(${item.id})">刪除</button>
+        `;
+        ul.appendChild(li);
+      });
+
+      const refund = calculateTaxRefund(subtotal);
+      const finalTotal = subtotal - refund;
+
+      document.getElementById('subtotal').innerText = subtotal.toLocaleString();
+      document.getElementById('tax-refund').innerText = refund.toLocaleString();
+      document.getElementById('final-total').innerText = finalTotal.toLocaleString();
+
+      // 更新提示狀態
+      const statusEl = document.getElementById('tax-status');
+      if (subtotal === 0) {
+        statusEl.innerText = '💡 滿 ₩15,000 即可享現場即時退稅（結帳時需出示護照）';
+        statusEl.style.color = '#666';
+      } else if (subtotal < 15000) {
+        const diff = 15000 - subtotal;
+        statusEl.innerText = `⚠️ 還差 ₩${diff.toLocaleString()} 即可達到退稅門檻！`;
+        statusEl.style.color = '#d93025';
+      } else if (subtotal > 1000000) {
+        statusEl.innerText = '⚠️ 注意：現場即時退稅單筆消費上限為 ₩1,000,000，超過部分需至機場辦理。';
+        statusEl.style.color = '#e67e22';
+      } else {
+        statusEl.innerText = '✅ 已達退稅門檻！結帳時請直接出示護照即可現場扣抵退稅款。';
+        statusEl.style.color = '#8cb811';
+      }
     }
   </script>
 </body>
