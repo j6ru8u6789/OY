@@ -3,149 +3,62 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Olive Young 購物隨身計算器 (含數量與台幣換算)</title>
+  <title>Olive Young 拍照搜尋與計算器</title>
+  <!-- 引入文字辨識 OCR 庫 -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      margin: 0;
-      padding: 16px;
-      background: #f8f9fa;
-      color: #333;
-    }
-    .card {
-      background: white;
-      border-radius: 12px;
-      padding: 16px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-      margin-bottom: 16px;
-    }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 16px; background: #f8f9fa; color: #333; }
+    .card { background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 16px; }
     h2 { margin-top: 0; color: #8cb811; font-size: 20px; }
-    h3 { margin-top: 0; color: #444; font-size: 16px; }
     
-    .input-group {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    .input-row {
-      display: flex;
-      gap: 8px;
-    }
-    input {
-      padding: 12px;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      font-size: 16px;
-      outline: none;
-    }
+    .ocr-box { border: 2px dashed #8cb811; border-radius: 8px; padding: 12px; text-align: center; background: #fafef5; margin-bottom: 12px; }
+    .file-input { display: none; }
+    .btn-ocr { background: #8cb811; color: white; border: none; padding: 10px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; }
+    
+    .status-msg { font-size: 13px; color: #666; margin-top: 8px; }
+    
+    .input-group { display: flex; flex-direction: column; gap: 8px; }
+    .input-row { display: flex; gap: 8px; }
+    input { padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 15px; outline: none; }
     input[type="text"] { flex: 2; }
     input[type="number"] { flex: 1; }
-    input:focus { border-color: #8cb811; }
     
-    .add-btn {
-      padding: 12px 16px;
-      background: #8cb811;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 16px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    .add-btn:active { background: #769c0e; }
+    .add-btn { background: #333; color: white; border: none; padding: 10px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; }
     
-    .item-list {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
-    .item-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 0;
-      border-bottom: 1px solid #eee;
-    }
-    .item-info {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-      flex: 1;
-    }
-    .item-name { font-weight: 500; font-size: 15px; }
+    .item-list { list-style: none; padding: 0; margin: 0; }
+    .item-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; }
+    .item-info { display: flex; flex-direction: column; flex: 1; }
+    .item-name { font-weight: 500; font-size: 14px; }
     .item-price { color: #666; font-size: 13px; }
-    .item-twd { color: #2b78e4; font-size: 13px; font-weight: 500; }
-
-    .qty-controls {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      margin: 0 10px;
-    }
-    .qty-btn {
-      width: 28px;
-      height: 28px;
-      background: #f0f0f0;
-      border: 1px solid #ccc;
-      border-radius: 50%;
-      font-size: 16px;
-      font-weight: bold;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .qty-count { font-size: 14px; font-weight: bold; min-width: 18px; text-align: center; }
-
-    .delete-btn {
-      background: #ff4d4f;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      padding: 6px 10px;
-      font-size: 12px;
-      cursor: pointer;
-    }
-
-    .summary-box {
-      background: #f0f7e6;
-      border: 1px solid #cce599;
-      border-radius: 8px;
-      padding: 12px;
-      margin-top: 12px;
-    }
-    .summary-row {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 8px;
-      font-size: 15px;
-    }
-    .summary-row.total {
-      font-size: 18px;
-      font-weight: bold;
-      color: #d93025;
-      border-top: 1px dashed #ccc;
-      padding-top: 8px;
-      margin-bottom: 0;
-    }
-    .tax-notice {
-      font-size: 12px;
-      color: #666;
-      margin-top: 6px;
-    }
+    .item-twd { color: #2b78e4; font-size: 12px; }
+    
+    .qty-controls { display: flex; align-items: center; gap: 6px; margin: 0 8px; }
+    .qty-btn { width: 26px; height: 26px; background: #eee; border: none; border-radius: 50%; font-weight: bold; cursor: pointer; }
+    
+    .summary-box { background: #f0f7e6; border-radius: 8px; padding: 12px; margin-top: 12px; }
+    .summary-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 14px; }
+    .summary-row.total { font-size: 17px; font-weight: bold; color: #d93025; border-top: 1px dashed #ccc; padding-top: 6px; margin-bottom: 0; }
   </style>
 </head>
 <body>
 
   <div class="card">
-    <h2>🛍️ Olive Young 記帳助手</h2>
+    <h2>📸 拍照辨識 & 官網查價</h2>
+    
+    <div class="ocr-box">
+      <input type="file" id="camera-input" accept="image/*" capture="environment" class="file-input" onchange="processImage(this)">
+      <button class="btn-ocr" onclick="document.getElementById('camera-input').click()">📷 拍攝 / 上傳商品包裝文字</button>
+      <div id="ocr-status" class="status-msg">拍照辨識包裝上的韓文品名並自動搜尋價格</div>
+    </div>
+
     <div class="input-group">
-      <input type="text" id="item-name" placeholder="商品名稱（例：面膜）">
+      <input type="text" id="item-name" placeholder="商品名稱（辨識或手動輸入）">
       <div class="input-row">
-        <input type="number" id="item-price" placeholder="單價 (₩)" inputmode="numeric">
-        <input type="number" id="item-qty" placeholder="數量" value="1" min="1" inputmode="numeric" style="width: 60px;">
-        <button class="add-btn" onclick="addItem()">新增</button>
+        <input type="number" id="item-price" placeholder="價格 (₩)" inputmode="numeric">
+        <input type="number" id="item-qty" value="1" min="1" inputmode="numeric" style="width: 50px;">
+        <button class="add-btn" onclick="addItem()">加入清單</button>
       </div>
+      <button onclick="searchOliveYoung()" style="background:#e8f5e9; border:1px solid #8cb811; color:#2e7d32; padding:8px; border-radius:6px; font-weight:bold; cursor:pointer;">🔍 用上方面稱搜尋 Olive Young 價格</button>
     </div>
   </div>
 
@@ -156,30 +69,99 @@
     <div class="summary-box">
       <div class="summary-row">
         <span>原價總計：</span>
-        <span>₩ <span id="subtotal">0</span> <small style="color:#666;">(NT$ <span id="subtotal-twd">0</span>)</small></span>
+        <span>₩ <span id="subtotal">0</span> <small>(NT$ <span id="subtotal-twd">0</span>)</small></span>
       </div>
       <div class="summary-row" style="color: #2b78e4;">
-        <span>預計現場退稅：</span>
+        <span>預計退稅：</span>
         <span>- ₩ <span id="tax-refund">0</span> <small>(NT$ <span id="refund-twd">0</span>)</small></span>
       </div>
       <div class="summary-row total">
-        <span>實付預估金額：</span>
-        <span>₩ <span id="final-total">0</span> <br><small style="font-size: 14px; font-weight: normal; display: block; text-align: right;">(約 NT$ <span id="final-twd">0</span>)</small></span>
-      </div>
-      <div class="tax-notice" id="tax-status">
-        💡 滿 ₩15,000 即可享現場即時退稅（記得出示護照）
+        <span>預估實付：</span>
+        <span>₩ <span id="final-total">0</span> <small style="font-size: 13px; font-weight: normal;">(約 NT$ <span id="final-twd">0</span>)</small></span>
       </div>
     </div>
   </div>
 
   <script>
-    // 台新/中信信用卡實務估算匯率：
-    // 國際組織參考匯率 (~0.0234) + 海外刷卡 1.5% 手續費 ≈ 0.02375 (1,000 韓元 ≈ 23.8 台幣)
-    const EXCHANGE_RATE = 0.02375;
-
+    const EXCHANGE_RATE = 0.02375; // 台新/中信 海外刷卡估算匯率 (含1.5%手續費)
     let items = [];
 
-    // 韓國現場即時退稅階梯計算
+    // 1. 拍照並使用 OCR 辨識韓文與英文
+    async function processImage(input) {
+      if (!input.files || !input.files[0]) return;
+      const file = input.files[0];
+      const statusEl = document.getElementById('ocr-status');
+      
+      statusEl.innerText = '⏳ 正在辨識圖片文字中...';
+
+      try {
+        const worker = await Tesseract.createWorker('kor+eng');
+        const ret = await worker.recognize(file);
+        await worker.terminate();
+
+        // 清理文字，取得文字較多的前兩行作為關鍵字
+        const cleanText = ret.data.text
+          .split('\n')
+          .map(t => t.trim())
+          .filter(t => t.length > 2)
+          .join(' ')
+          .substring(0, 30);
+
+        if (cleanText) {
+          document.getElementById('item-name').value = cleanText;
+          statusEl.innerText = '✅ 辨識成功！正在自動搜尋 官網價格...';
+          searchOliveYoung();
+        } else {
+          statusEl.innerText = '⚠️ 未能清晰辨識文字，請重新拍照或手動輸入。';
+        }
+      } catch (err) {
+        statusEl.innerText = '❌ 辨識失敗，請直接輸入商品名稱。';
+      }
+    }
+
+    // 2. 爬取 Olive Young 官網搜尋結果
+    async function searchOliveYoung() {
+      const keyword = document.getElementById('item-name').value.trim();
+      const statusEl = document.getElementById('ocr-status');
+
+      if (!keyword) {
+        alert('請先輸入或辨識商品名稱！');
+        return;
+      }
+
+      statusEl.innerText = `🔍 搜尋中：${keyword}...`;
+
+      try {
+        // 使用免費 CORS 代理請求韓國 Olive Young 搜尋頁面
+        const targetUrl = `https://www.oliveyoung.co.kr/store/search/getSearchMain.do?query=${encodeURIComponent(keyword)}`;
+        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
+
+        const response = await fetch(proxyUrl);
+        const data = await response.json();
+
+        if (data.contents) {
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(data.contents, 'text/html');
+          
+          // 解析搜尋頁面的價格與名稱
+          const priceEl = doc.querySelector('.tx_cur .tx_num');
+          const nameEl = doc.querySelector('.tx_name');
+
+          if (priceEl) {
+            const priceText = priceEl.innerText.replace(/[^0-9]/g, '');
+            document.getElementById('item-price').value = priceText;
+            if (nameEl) document.getElementById('item-name').value = nameEl.innerText.trim();
+            statusEl.innerText = `🎉 已找到官網價格：₩ ${parseInt(priceText).toLocaleString()}`;
+          } else {
+            statusEl.innerText = '⚠️ 官網未找到完全匹配商品，請手動確認標籤價格。';
+          }
+        }
+      } catch (e) {
+        statusEl.innerText = '⚠️ 網路連線逾時，請直接輸入現場標籤價格。';
+      }
+    }
+
+    // 3. 計算與清單管理邏輯
     function calculateTaxRefund(amount) {
       if (amount < 15000) return 0;
       if (amount < 30000) return 1000;
@@ -188,38 +170,25 @@
       if (amount < 100000) return 5000;
       if (amount < 125000) return 6000;
       if (amount < 150000) return 7500;
-      if (amount < 175000) return 9000;
       if (amount < 200000) return 10000;
-      if (amount < 250000) return 12000;
-      if (amount < 300000) return 15000;
-      if (amount < 350000) return 18000;
-      if (amount < 400000) return 21000;
-      if (amount < 450000) return 24000;
-      if (amount < 500000) return 27000;
       return Math.floor(amount * 0.06);
     }
 
     function addItem() {
-      const nameInput = document.getElementById('item-name');
-      const priceInput = document.getElementById('item-price');
-      const qtyInput = document.getElementById('item-qty');
-
-      const name = nameInput.value.trim() || `商品 ${items.length + 1}`;
-      const price = parseInt(priceInput.value);
-      const qty = parseInt(qtyInput.value) || 1;
+      const name = document.getElementById('item-name').value.trim() || '未命名商品';
+      const price = parseInt(document.getElementById('item-price').value);
+      const qty = parseInt(document.getElementById('item-qty').value) || 1;
 
       if (isNaN(price) || price <= 0) {
-        alert('請輸入有效的金額！');
+        alert('請輸入有效金額！');
         return;
       }
 
       items.push({ id: Date.now(), name, price, qty });
-
-      // 清空輸入框
-      nameInput.value = '';
-      priceInput.value = '';
-      qtyInput.value = '1';
-
+      document.getElementById('item-name').value = '';
+      document.getElementById('item-price').value = '';
+      document.getElementById('item-qty').value = '1';
+      document.getElementById('ocr-status').innerText = '拍照辨識包裝上的韓文品名並自動搜尋價格';
       updateUI();
     }
 
@@ -227,28 +196,18 @@
       const item = items.find(i => i.id === id);
       if (item) {
         item.qty += delta;
-        if (item.qty <= 0) {
-          deleteItem(id);
-          return;
-        }
+        if (item.qty <= 0) items = items.filter(i => i.id !== id);
         updateUI();
       }
-    }
-
-    function deleteItem(id) {
-      items = items.filter(item => item.id !== id);
-      updateUI();
     }
 
     function updateUI() {
       const ul = document.getElementById('item-list');
       ul.innerHTML = '';
-
       let subtotal = 0;
 
       items.forEach(item => {
         const itemTotalKrw = item.price * item.qty;
-        const itemTotalTwd = Math.round(itemTotalKrw * EXCHANGE_RATE);
         subtotal += itemTotalKrw;
 
         const li = document.createElement('li');
@@ -257,14 +216,13 @@
           <div class="item-info">
             <span class="item-name">${item.name}</span>
             <span class="item-price">₩ ${item.price.toLocaleString()} × ${item.qty} = ₩ ${itemTotalKrw.toLocaleString()}</span>
-            <span class="item-twd">≈ NT$ ${itemTotalTwd.toLocaleString()}</span>
+            <span class="item-twd">≈ NT$ ${Math.round(itemTotalKrw * EXCHANGE_RATE).toLocaleString()}</span>
           </div>
           <div class="qty-controls">
             <button class="qty-btn" onclick="changeQty(${item.id}, -1)">-</button>
-            <span class="qty-count">${item.qty}</span>
+            <span>${item.qty}</span>
             <button class="qty-btn" onclick="changeQty(${item.id}, 1)">+</button>
           </div>
-          <button class="delete-btn" onclick="deleteItem(${item.id})">刪除</button>
         `;
         ul.appendChild(li);
       });
@@ -272,37 +230,12 @@
       const refund = calculateTaxRefund(subtotal);
       const finalTotal = subtotal - refund;
 
-      // 換算台幣
-      const subtotalTwd = Math.round(subtotal * EXCHANGE_RATE);
-      const refundTwd = Math.round(refund * EXCHANGE_RATE);
-      const finalTwd = Math.round(finalTotal * EXCHANGE_RATE);
-
       document.getElementById('subtotal').innerText = subtotal.toLocaleString();
-      document.getElementById('subtotal-twd').innerText = subtotalTwd.toLocaleString();
-
+      document.getElementById('subtotal-twd').innerText = Math.round(subtotal * EXCHANGE_RATE).toLocaleString();
       document.getElementById('tax-refund').innerText = refund.toLocaleString();
-      document.getElementById('refund-twd').innerText = refundTwd.toLocaleString();
-
+      document.getElementById('refund-twd').innerText = Math.round(refund * EXCHANGE_RATE).toLocaleString();
       document.getElementById('final-total').innerText = finalTotal.toLocaleString();
-      document.getElementById('final-twd').innerText = finalTwd.toLocaleString();
-
-      // 更新提示狀態
-      const statusEl = document.getElementById('tax-status');
-      if (subtotal === 0) {
-        statusEl.innerText = '💡 滿 ₩15,000 即可享現場即時退稅（結帳時需出示護照）';
-        statusEl.style.color = '#666';
-      } else if (subtotal < 15000) {
-        const diff = 15000 - subtotal;
-        const diffTwd = Math.round(diff * EXCHANGE_RATE);
-        statusEl.innerText = `⚠️ 還差 ₩${diff.toLocaleString()} (約 NT$${diffTwd}) 即可達到退稅門檻！`;
-        statusEl.style.color = '#d93025';
-      } else if (subtotal > 1000000) {
-        statusEl.innerText = '⚠️ 注意：現場即時退稅單筆消費上限為 ₩1,000,000，超過部分需至機場辦理。';
-        statusEl.style.color = '#e67e22';
-      } else {
-        statusEl.innerText = '✅ 已達退稅門檻！結帳時請直接出示護照即可現場扣抵退稅款。';
-        statusEl.style.color = '#8cb811';
-      }
+      document.getElementById('final-twd').innerText = Math.round(finalTotal * EXCHANGE_RATE).toLocaleString();
     }
   </script>
 </body>
