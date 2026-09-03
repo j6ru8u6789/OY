@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Olive Young 購物隨身計算器 (含紀錄與即時換算)</title>
+  <title>Olive Young 購物隨身計算器 (含分店紀錄與匯率推算)</title>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -33,16 +33,16 @@
       align-items: center;
     }
     input, select {
-      padding: 10px;
+      padding: 8px 10px;
       border: 1px solid #ddd;
       border-radius: 8px;
-      font-size: 15px;
+      font-size: 14px;
       outline: none;
       box-sizing: border-box;
     }
     input[type="text"] { flex: 2; }
     input[type="number"] { flex: 1; }
-    input[type="date"] { padding: 8px; font-size: 14px; }
+    input[type="date"] { padding: 6px 8px; font-size: 13px; }
     input:focus, select:focus { border-color: #8cb811; }
 
     .realtime-twd {
@@ -92,51 +92,38 @@
       align-items: center;
       padding: 10px 0;
       border-bottom: 1px solid #eee;
+      gap: 6px;
     }
-    .item-info {
+    .item-inputs {
       display: flex;
       flex-direction: column;
-      gap: 2px;
+      gap: 4px;
       flex: 1;
     }
-    .item-name { font-weight: 500; font-size: 15px; }
-    .item-price { color: #666; font-size: 13px; }
-    .item-twd { color: #2b78e4; font-size: 13px; font-weight: 500; }
+    .item-inputs-row {
+      display: flex;
+      gap: 6px;
+    }
 
     .qty-controls {
       display: flex;
       align-items: center;
-      gap: 6px;
-      margin: 0 8px;
+      gap: 4px;
     }
     .qty-btn {
-      width: 28px;
-      height: 28px;
+      width: 26px;
+      height: 26px;
       background: #f0f0f0;
       border: 1px solid #ccc;
       border-radius: 50%;
-      font-size: 16px;
+      font-size: 14px;
       font-weight: bold;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
     }
-    .qty-count { font-size: 14px; font-weight: bold; min-width: 18px; text-align: center; }
 
-    .action-btns {
-      display: flex;
-      gap: 4px;
-    }
-    .edit-btn {
-      background: #2b78e4;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      padding: 6px 8px;
-      font-size: 12px;
-      cursor: pointer;
-    }
     .delete-btn {
       background: #ff4d4f;
       color: white;
@@ -180,31 +167,31 @@
       padding: 12px;
       background: #fdfdfd;
       border-radius: 8px;
-      margin-bottom: 12px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+      margin-bottom: 16px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
     }
     .history-header {
       display: flex;
       justify-content: space-between;
       font-weight: bold;
       color: #333;
-      margin-bottom: 6px;
+      margin-bottom: 8px;
       border-bottom: 1px solid #eee;
       padding-bottom: 4px;
     }
-    .history-items {
+    .card-inputs {
+      background: #fff8e6;
+      border: 1px solid #ffe58f;
+      padding: 8px 10px;
+      border-radius: 6px;
+      margin-top: 8px;
       font-size: 13px;
-      color: #555;
-      margin-bottom: 6px;
-      line-height: 1.4;
     }
-    .history-footer {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 14px;
-      font-weight: bold;
+    .calc-rate-box {
       color: #d93025;
+      font-weight: bold;
+      margin-top: 4px;
+      font-size: 13px;
     }
   </style>
 </head>
@@ -214,35 +201,38 @@
     <h2>🛍️ Olive Young 記帳助手</h2>
     <div class="input-group">
       <div class="input-row">
-        <label style="font-size: 14px; font-weight: bold;">日期：</label>
+        <label style="font-size: 13px; font-weight: bold;">日期：</label>
         <input type="date" id="record-date">
+        <label style="font-size: 13px; font-weight: bold;">門市：</label>
+        <input type="text" id="record-store" placeholder="例：明洞旗艦店" style="flex: 1;">
       </div>
-      <input type="text" id="item-name" placeholder="商品名稱（例：護手霜）">
+      
       <div class="input-row">
+        <input type="text" id="item-name" placeholder="商品名稱（例：護手霜）">
         <input type="number" id="item-price" placeholder="單價 (₩)" inputmode="numeric" oninput="updateRealtimeTwd()">
-        <input type="number" id="item-qty" placeholder="數量" value="1" min="1" inputmode="numeric" style="width: 60px;" oninput="updateRealtimeTwd()">
+        <input type="number" id="item-qty" placeholder="數量" value="1" min="1" inputmode="numeric" style="width: 50px;" oninput="updateRealtimeTwd()">
       </div>
-      <div id="realtime-twd" class="realtime-twd">💡 折合台幣：NT$ 0</div>
-      <button id="add-btn" class="btn-main" onclick="addItem()">新增至購物車</button>
+      <div id="realtime-twd" class="realtime-twd">💡 折合預估台幣：NT$ 0</div>
+      <button class="btn-main" onclick="addItem()">➕ 加入購物車</button>
     </div>
   </div>
 
   <div class="card">
-    <h3>🛒 本次購物車清單</h3>
+    <h3>🛒 本次購物車清單（可直接修改名稱/單價）</h3>
     <ul id="item-list" class="item-list"></ul>
 
     <div class="summary-box">
       <div class="summary-row">
         <span>原價總計：</span>
-        <span>₩ <span id="subtotal">0</span> <small style="color:#666;">(NT$ <span id="subtotal-twd">0</span>)</small></span>
+        <span>₩ <span id="subtotal">0</span> <small style="color:#666;">(約 NT$ <span id="subtotal-twd">0</span>)</small></span>
       </div>
       <div class="summary-row" style="color: #2b78e4;">
         <span>預計現場退稅：</span>
-        <span>- ₩ <span id="tax-refund">0</span> <small>(NT$ <span id="refund-twd">0</span>)</small></span>
+        <span>- ₩ <span id="tax-refund">0</span> <small>(約 NT$ <span id="refund-twd">0</span>)</small></span>
       </div>
       <div class="summary-row total">
         <span>實付預估金額：</span>
-        <span>₩ <span id="final-total">0</span> <br><small style="font-size: 14px; font-weight: normal; display: block; text-align: right;">(約 NT$ <span id="final-twd">0</span>)</small></span>
+        <span>₩ <span id="final-total">0</span> <br><small style="font-size: 14px; font-weight: normal; display: block; text-align: right;">(預估約 NT$ <span id="final-twd">0</span>)</small></span>
       </div>
       <div class="tax-notice" id="tax-status">
         💡 滿 ₩15,000 即可享現場即時退稅（記得出示護照）
@@ -261,24 +251,23 @@
   </div>
 
   <script>
-    const EXCHANGE_RATE = 0.02375; // 刷卡估算匯率 (韓元 × 0.02375 ≈ 台幣)
+    const DEFAULT_RATE = 0.02375; // 預設估算匯率 (韓元 × 0.02375 ≈ 台幣)
     let items = [];
-    let history = JSON.parse(localStorage.getItem('oy_history') || '[]');
-    let editingId = null;
+    let history = JSON.parse(localStorage.getItem('oy_history_v2') || '[]');
 
     // 初始化日期預設為今天
     document.getElementById('record-date').value = new Date().toISOString().split('T')[0];
 
-    // 輸入金額時即時計算台幣
+    // 輸入時即時提示台幣
     function updateRealtimeTwd() {
       const price = parseInt(document.getElementById('item-price').value) || 0;
       const qty = parseInt(document.getElementById('item-qty').value) || 1;
       const totalKrw = price * qty;
-      const twd = Math.round(totalKrw * EXCHANGE_RATE);
-      document.getElementById('realtime-twd').innerText = `💡 單件約 NT$ ${Math.round(price * EXCHANGE_RATE).toLocaleString()} | 小計 NT$ ${twd.toLocaleString()}`;
+      const twd = Math.round(totalKrw * DEFAULT_RATE);
+      document.getElementById('realtime-twd').innerText = `💡 單件約 NT$ ${Math.round(price * DEFAULT_RATE).toLocaleString()} | 小計約 NT$ ${twd.toLocaleString()}`;
     }
 
-    // 韓國現場即時退稅階梯計算
+    // 退稅階梯計算
     function calculateTaxRefund(amount) {
       if (amount < 15000) return 0;
       if (amount < 30000) return 1000;
@@ -312,19 +301,7 @@
         return;
       }
 
-      if (editingId) {
-        const item = items.find(i => i.id === editingId);
-        if (item) {
-          item.name = name;
-          item.price = price;
-          item.qty = qty;
-        }
-        editingId = null;
-        document.getElementById('add-btn').innerText = '新增至購物車';
-        document.getElementById('add-btn').style.background = '#8cb811';
-      } else {
-        items.push({ id: Date.now(), name, price, qty });
-      }
+      items.push({ id: Date.now(), name, price, qty });
 
       nameInput.value = '';
       priceInput.value = '';
@@ -333,17 +310,14 @@
       updateUI();
     }
 
-    function editItem(id) {
+    // 直接在購物車清單內修改商品資訊
+    function updateCartItem(id, field, value) {
       const item = items.find(i => i.id === id);
       if (item) {
-        document.getElementById('item-name').value = item.name;
-        document.getElementById('item-price').value = item.price;
-        document.getElementById('item-qty').value = item.qty;
-        editingId = id;
-        
-        document.getElementById('add-btn').innerText = '儲存修改';
-        document.getElementById('add-btn').style.background = '#2b78e4';
-        updateRealtimeTwd();
+        if (field === 'name') item.name = value;
+        if (field === 'price') item.price = parseInt(value) || 0;
+        if (field === 'qty') item.qty = parseInt(value) || 1;
+        updateUI();
       }
     }
 
@@ -361,11 +335,6 @@
 
     function deleteItem(id) {
       items = items.filter(item => item.id !== id);
-      if (editingId === id) {
-        editingId = null;
-        document.getElementById('add-btn').innerText = '新增至購物車';
-        document.getElementById('add-btn').style.background = '#8cb811';
-      }
       updateUI();
     }
 
@@ -376,26 +345,24 @@
 
       items.forEach(item => {
         const itemTotalKrw = item.price * item.qty;
-        const itemTotalTwd = Math.round(itemTotalKrw * EXCHANGE_RATE);
         subtotal += itemTotalKrw;
 
         const li = document.createElement('li');
         li.className = 'item-row';
         li.innerHTML = `
-          <div class="item-info">
-            <span class="item-name">${item.name}</span>
-            <span class="item-price">₩ ${item.price.toLocaleString()} × ${item.qty} = ₩ ${itemTotalKrw.toLocaleString()}</span>
-            <span class="item-twd">≈ NT$ ${itemTotalTwd.toLocaleString()}</span>
+          <div class="item-inputs">
+            <input type="text" value="${item.name}" onchange="updateCartItem(${item.id}, 'name', this.value)" placeholder="品名">
+            <div class="item-inputs-row">
+              <input type="number" value="${item.price}" onchange="updateCartItem(${item.id}, 'price', this.value)" placeholder="單價(₩)">
+              <span style="font-size:12px; color:#2b78e4; align-self:center;">≈NT$${Math.round(itemTotalKrw * DEFAULT_RATE)}</span>
+            </div>
           </div>
           <div class="qty-controls">
             <button class="qty-btn" onclick="changeQty(${item.id}, -1)">-</button>
-            <span class="qty-count">${item.qty}</span>
+            <span style="font-size:14px; font-weight:bold; width:18px; text-align:center;">${item.qty}</span>
             <button class="qty-btn" onclick="changeQty(${item.id}, 1)">+</button>
           </div>
-          <div class="action-btns">
-            <button class="edit-btn" onclick="editItem(${item.id})">編輯</button>
-            <button class="delete-btn" onclick="deleteItem(${item.id})">刪除</button>
-          </div>
+          <button class="delete-btn" onclick="deleteItem(${item.id})">刪</button>
         `;
         ul.appendChild(li);
       });
@@ -404,13 +371,13 @@
       const finalTotal = subtotal - refund;
 
       document.getElementById('subtotal').innerText = subtotal.toLocaleString();
-      document.getElementById('subtotal-twd').innerText = Math.round(subtotal * EXCHANGE_RATE).toLocaleString();
+      document.getElementById('subtotal-twd').innerText = Math.round(subtotal * DEFAULT_RATE).toLocaleString();
 
       document.getElementById('tax-refund').innerText = refund.toLocaleString();
-      document.getElementById('refund-twd').innerText = Math.round(refund * EXCHANGE_RATE).toLocaleString();
+      document.getElementById('refund-twd').innerText = Math.round(refund * DEFAULT_RATE).toLocaleString();
 
       document.getElementById('final-total').innerText = finalTotal.toLocaleString();
-      document.getElementById('final-twd').innerText = Math.round(finalTotal * EXCHANGE_RATE).toLocaleString();
+      document.getElementById('final-twd').innerText = Math.round(finalTotal * DEFAULT_RATE).toLocaleString();
 
       const statusEl = document.getElementById('tax-status');
       if (subtotal === 0) {
@@ -418,7 +385,7 @@
         statusEl.style.color = '#666';
       } else if (subtotal < 15000) {
         const diff = 15000 - subtotal;
-        statusEl.innerText = `⚠️ 還差 ₩${diff.toLocaleString()} (約 NT$${Math.round(diff * EXCHANGE_RATE)}) 即可達到退稅門檻！`;
+        statusEl.innerText = `⚠️ 還差 ₩${diff.toLocaleString()} 即可達到退稅門檻！`;
         statusEl.style.color = '#d93025';
       } else {
         statusEl.innerText = '✅ 已達退稅門檻！結帳時請直接出示護照即可現場扣抵退稅款。';
@@ -426,6 +393,7 @@
       }
     }
 
+    // 結帳功能：依日期計算當天的第幾單
     function checkout() {
       if (items.length === 0) {
         alert('購物車是空的，無法結帳！');
@@ -433,31 +401,39 @@
       }
 
       const date = document.getElementById('record-date').value || new Date().toISOString().split('T')[0];
+      const store = document.getElementById('record-store').value.trim() || '門市未標示';
+
+      // 計算該日期已有的筆數，自動算出這是第幾單
+      const sameDayCount = history.filter(h => h.date === date).length;
+      const orderNumber = sameDayCount + 1;
+
       let subtotal = 0;
       items.forEach(i => subtotal += i.price * i.qty);
       const refund = calculateTaxRefund(subtotal);
       const finalKrw = subtotal - refund;
-      const finalTwd = Math.round(finalKrw * EXCHANGE_RATE);
 
       const record = {
         id: Date.now(),
         date: date,
+        store: store,
+        orderNumber: orderNumber,
         items: [...items],
         subtotal: subtotal,
         refund: refund,
         finalKrw: finalKrw,
-        finalTwd: finalTwd
+        actualCardTwd: ''
       };
 
       history.unshift(record);
-      localStorage.setItem('oy_history', JSON.stringify(history));
+      localStorage.setItem('oy_history_v2', JSON.stringify(history));
 
       items = [];
       updateUI();
       renderHistory();
-      alert(`🎉 結帳成功！已存入 ${date} 的歷史紀錄中。`);
+      alert(`🎉 結帳成功！已儲存為【${date} ${store} - 第 ${orderNumber} 單】`);
     }
 
+    // 渲染歷史紀錄
     function renderHistory() {
       const container = document.getElementById('history-list');
       if (history.length === 0) {
@@ -467,28 +443,109 @@
 
       container.innerHTML = '';
       history.forEach((rec) => {
-        const itemSummary = rec.items.map(i => `${i.name} ×${i.qty}`).join('、');
+        let calcRateText = '';
+        if (rec.actualCardTwd && rec.finalKrw > 0) {
+          const calcRate = (parseFloat(rec.actualCardTwd) / rec.finalKrw).toFixed(6);
+          calcRateText = `💡 實算匯率：1 韓元 ≈ NT$ ${calcRate}`;
+        }
+
         const card = document.createElement('div');
         card.className = 'history-card';
+        
+        let itemsHtml = rec.items.map((item, itemIdx) => `
+          <div style="display:flex; gap:6px; margin-bottom:4px;">
+            <input type="text" value="${item.name}" onchange="updateHistoryItem(${rec.id}, ${itemIdx}, 'name', this.value)" style="flex:2; padding:4px;">
+            <input type="number" value="${item.price}" onchange="updateHistoryItem(${rec.id}, ${itemIdx}, 'price', this.value)" style="width:70px; padding:4px;">
+            <input type="number" value="${item.qty}" onchange="updateHistoryItem(${rec.id}, ${itemIdx}, 'qty', this.value)" style="width:40px; padding:4px;">
+            <button onclick="deleteHistorySubItem(${rec.id}, ${itemIdx})" style="background:#ff4d4f; color:white; border:none; border-radius:4px;">✕</button>
+          </div>
+        `).join('');
+
         card.innerHTML = `
           <div class="history-header">
-            <span>📅 ${rec.date}</span>
-            <button onclick="deleteHistoryItem(${rec.id})" style="background:none; border:none; color:#ff4d4f; cursor:pointer;">刪除</button>
+            <span>📅 ${rec.date} (第 ${rec.orderNumber} 單) - ${rec.store}</span>
+            <button onclick="deleteHistoryRecord(${rec.id})" style="background:none; border:none; color:#ff4d4f; cursor:pointer;">刪除此單</button>
           </div>
-          <div class="history-items">🛒 ${itemSummary}</div>
-          <div class="history-footer">
-            <span>實付：₩ ${rec.finalKrw.toLocaleString()}</span>
-            <span>≈ NT$ ${rec.finalTwd.toLocaleString()}</span>
+          
+          <div style="margin-bottom:8px;">
+            <div style="font-size:12px; color:#666; margin-bottom:4px;">商品清單（可直接修改）：</div>
+            ${itemsHtml}
+            <button onclick="addHistorySubItem(${rec.id})" style="font-size:12px; background:#e6f7ff; color:#1890ff; border:1px solid #91d5ff; border-radius:4px; padding:2px 8px; cursor:pointer; margin-top:4px;">+ 補新增商品至此單</button>
+          </div>
+
+          <div style="font-size:14px; font-weight:bold; color:#333; margin-top:8px;">
+            退稅後應付韓元：₩ ${rec.finalKrw.toLocaleString()}
+          </div>
+
+          <div class="card-inputs">
+            <label>💳 信用卡最終扣款總額 (NT$)：</label>
+            <input type="number" value="${rec.actualCardTwd || ''}" placeholder="請輸入帳單台幣金額" onchange="updateCardAmount(${rec.id}, this.value)" style="width:100%; margin-top:4px;">
+            <div class="calc-rate-box">${calcRateText}</div>
           </div>
         `;
         container.appendChild(card);
       });
     }
 
-    function deleteHistoryItem(id) {
-      if (confirm('確定要刪除這筆歷史紀錄嗎？')) {
+    // 歷史紀錄中的信用卡金額更新與匯率推算
+    function updateCardAmount(recId, val) {
+      const rec = history.find(h => h.id === recId);
+      if (rec) {
+        rec.actualCardTwd = val;
+        localStorage.setItem('oy_history_v2', JSON.stringify(history));
+        renderHistory();
+      }
+    }
+
+    // 重新計算歷史紀錄的退稅與總額
+    function recalculateRecord(rec) {
+      let subtotal = 0;
+      rec.items.forEach(i => subtotal += i.price * i.qty);
+      rec.subtotal = subtotal;
+      rec.refund = calculateTaxRefund(subtotal);
+      rec.finalKrw = subtotal - rec.refund;
+    }
+
+    // 修改歷史紀錄中的商品
+    function updateHistoryItem(recId, itemIdx, field, val) {
+      const rec = history.find(h => h.id === recId);
+      if (rec && rec.items[itemIdx]) {
+        if (field === 'name') rec.items[itemIdx].name = val;
+        if (field === 'price') rec.items[itemIdx].price = parseInt(val) || 0;
+        if (field === 'qty') rec.items[itemIdx].qty = parseInt(val) || 1;
+        recalculateRecord(rec);
+        localStorage.setItem('oy_history_v2', JSON.stringify(history));
+        renderHistory();
+      }
+    }
+
+    // 歷史紀錄中補新增子商品
+    function addHistorySubItem(recId) {
+      const rec = history.find(h => h.id === recId);
+      if (rec) {
+        rec.items.push({ id: Date.now(), name: '新商品', price: 0, qty: 1 });
+        recalculateRecord(rec);
+        localStorage.setItem('oy_history_v2', JSON.stringify(history));
+        renderHistory();
+      }
+    }
+
+    // 歷史紀錄中刪除子商品
+    function deleteHistorySubItem(recId, itemIdx) {
+      const rec = history.find(h => h.id === recId);
+      if (rec) {
+        rec.items.splice(itemIdx, 1);
+        recalculateRecord(rec);
+        localStorage.setItem('oy_history_v2', JSON.stringify(history));
+        renderHistory();
+      }
+    }
+
+    // 刪除整筆歷史紀錄
+    function deleteHistoryRecord(id) {
+      if (confirm('確定要刪除這筆結帳紀錄嗎？')) {
         history = history.filter(h => h.id !== id);
-        localStorage.setItem('oy_history', JSON.stringify(history));
+        localStorage.setItem('oy_history_v2', JSON.stringify(history));
         renderHistory();
       }
     }
@@ -496,7 +553,7 @@
     function clearHistory() {
       if (confirm('確定要清空所有歷史紀錄嗎？')) {
         history = [];
-        localStorage.removeItem('oy_history');
+        localStorage.removeItem('oy_history_v2');
         renderHistory();
       }
     }
